@@ -370,3 +370,7 @@ digests/
 processed_videos.json
 processed_videos.lastrun
 /.claude/settings.local.json
+/.idea/.idea.yt-digest/.idea/.gitignore
+/.idea/.idea.yt-digest/.idea/encodings.xml
+/.idea/.idea.yt-digest/.idea/indexLayout.xml
+/.idea/.idea.yt-digest/.idea/vcs.xml
