@@ -10,23 +10,24 @@ public class Prompt
     public string GetSummaryPrompt(VideoInfo video, string transcript)
     {
         return $"""
-                Analysiere das folgende Transkript und fasse die Kernaussagen zusammen.
-                Antworte ausschließlich auf Deutsch. Den Video-Titel lasse bitte in seiner Originalsprache.
 
-                Titel: {video.Title}
+                Analyze the following video transcript and summarize the key points.
+                Keep the summary and video title in the language of the video transcript.
 
-                Transkript:
+                Title: {video.Title}
+
+                Transcript:
                 {transcript}
 
-                Erstelle eine strukturierte Zusammenfassung in diesem Markdown-Format:
+                Create the structured summary in this Markdown format:
 
                 ## {video.Title}
 
-                ### Worum geht es?
-                2–3 Sätze zur Kernaussage des Videos.
+                ### What is it about?
+                2–3 sentences about the key points of the video.
 
-                ### Die wichtigsten Punkte
-                Bullet-Liste der wichtigsten Aussagen mit Begründung.
+                ### The most important points
+                Bullet list of the most important statements with justification.
                 """;
     }
 }

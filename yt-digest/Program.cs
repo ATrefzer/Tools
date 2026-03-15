@@ -114,7 +114,7 @@ internal class Program
         var summary = await summaryService.SummarizeAsync(video, transcript);
 
         // Redirect to a file if needed.
-        await Console.Error.WriteLineAsync(summary);
+        await Console.Out.WriteLineAsync(summary);
     }
 
     private static async Task<List<ChannelConfig>> LoadChannelsAsync()
