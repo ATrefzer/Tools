@@ -10,19 +10,14 @@ namespace YoutubeDigest.Services;
 /// </summary>
 public class SummaryStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true
-    };
+    private static readonly AppJsonContext JsonContext = new(new JsonSerializerOptions { WriteIndented = true });
 
     private readonly string _filePath;
-    private readonly string _lastRunPath;
     private readonly Dictionary<string, ProcessedVideo> _processed;
 
     public SummaryStore(string filePath)
     {
         _filePath = filePath;
-        _lastRunPath = Path.ChangeExtension(filePath, ".lastrun");
         _processed = Load();
     }
     
@@ -57,13 +52,13 @@ public class SummaryStore
         }
 
         var json = File.ReadAllText(_filePath);
-        return JsonSerializer.Deserialize<Dictionary<string, ProcessedVideo>>(json)
+        return JsonSerializer.Deserialize(json, JsonContext.DictionaryStringProcessedVideo)
                ?? new Dictionary<string, ProcessedVideo>();
     }
 
     private void Save()
     {
-        var json = JsonSerializer.Serialize(_processed, JsonOptions);
+        var json = JsonSerializer.Serialize(_processed, JsonContext.DictionaryStringProcessedVideo);
         File.WriteAllText(_filePath, json);
     }
 }
