@@ -11,7 +11,7 @@ public class Prompt
     {
         return $"""
                 Analysiere das folgende Transkript und fasse die Kernaussagen zusammen.
-                Antworte ausschließlich auf Deutsch. Den Video-Titel lasse bitte unverändert in der Zusammenfassung stehen.
+                Antworte ausschließlich auf Deutsch. Den Video-Titel lasse bitte in seiner Originalsprache.
 
                 Titel: {video.Title}
 
@@ -26,7 +26,7 @@ public class Prompt
                 2–3 Sätze zur Kernaussage des Videos.
 
                 ### Die wichtigsten Punkte
-                Bullet-Liste der wichtigsten Aussagen mit kurzer Begründung.
+                Bullet-Liste der wichtigsten Aussagen mit Begründung.
                 """;
     }
 }

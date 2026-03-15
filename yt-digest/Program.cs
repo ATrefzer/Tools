@@ -122,7 +122,7 @@ internal class Program
         if (!File.Exists(AppPaths.ChannelsFile))
         {
             await File.WriteAllTextAsync(AppPaths.ChannelsFile,
-                "# Add one YouTube channel URL per line.\n# Example:\n# https://www.youtube.com/@SomeChannel/videos[,subtitle-lang}\n");
+                "# Add one YouTube channel URL per line.\n# Example:\n# https://www.youtube.com/@SomeChannel/videos[,subtitle-lang]\n");
             Console.WriteLine($"Created channels file: {AppPaths.ChannelsFile}");
             Console.WriteLine("\tAdd YouTube channel URLs and run again.");
             return [];
@@ -153,7 +153,10 @@ internal class Program
         Console.WriteLine($"\tFetching last {Constants.MaxVideosPerChannel} videos...");
 
         var allVideos = await ytDlp.GetRecentVideosAsync(channel.Url, Constants.MaxVideosPerChannel);
-        var newVideos = allVideos.Where(v => !store.IsProcessed(v.Id)).ToList();
+        var newVideos = allVideos
+            .Where(v => !store.IsProcessed(v.Id))
+            .Take(Constants.MaxVideosPerChannel)
+            .ToList();
 
         Console.WriteLine($"\t{newVideos.Count} new videos to process.\n");
 

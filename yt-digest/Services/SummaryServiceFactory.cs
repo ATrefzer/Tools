@@ -1,17 +1,15 @@
-using YoutubeDigest;
-
 namespace YoutubeDigest.Services;
 
 /// <summary>
-/// Factory to create the appropriate summary service based on configuration.
+///     Factory to create the appropriate summary service based on configuration.
 /// </summary>
 public static class SummaryServiceFactory
 {
     private static readonly string KeyFile = AppPaths.KeyFile;
 
     /// <summary>
-    /// Creates a summary service based on available configuration.
-    /// Priority: 1) key.txt file, 2) ANTHROPIC_API_KEY env var, 3) Ollama fallback
+    ///     Creates a summary service based on available configuration.
+    ///     Priority: 1) key.txt file, 2) ANTHROPIC_API_KEY env var, 3) Ollama fallback
     /// </summary>
     public static ISummaryService Create()
     {
@@ -37,7 +35,9 @@ public static class SummaryServiceFactory
         {
             var key = File.ReadAllText(KeyFile).Trim();
             if (!string.IsNullOrEmpty(key))
+            {
                 return key;
+            }
         }
 
         // 2. Fall back to environment variable

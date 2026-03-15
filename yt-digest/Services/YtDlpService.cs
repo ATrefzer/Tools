@@ -138,7 +138,7 @@ public class YtDlpService
                 continue;
 
             // Remove inline tags: <c>, </c>, <00:00:12.000>, etc.
-            var cleaned = Regex.Replace(lastTextLine, @"<[^>]+>", "").Trim();
+            var cleaned = Regex.Replace(lastTextLine, "<[^>]+>", "").Trim();
 
             // Skip empty lines and duplicates
             if (string.IsNullOrEmpty(cleaned) || cleaned == lastLine) continue;
