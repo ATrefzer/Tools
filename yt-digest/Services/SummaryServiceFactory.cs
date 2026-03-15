@@ -1,3 +1,5 @@
+using YoutubeDigest;
+
 namespace YoutubeDigest.Services;
 
 /// <summary>
@@ -5,7 +7,7 @@ namespace YoutubeDigest.Services;
 /// </summary>
 public static class SummaryServiceFactory
 {
-    private const string KeyFile = "key.txt";
+    private static readonly string KeyFile = AppPaths.KeyFile;
 
     /// <summary>
     /// Creates a summary service based on available configuration.

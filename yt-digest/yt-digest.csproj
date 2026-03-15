@@ -9,9 +9,4 @@
   <ItemGroup>
     <PackageReference Include="Anthropic" Version="12.8.0" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="channels.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>

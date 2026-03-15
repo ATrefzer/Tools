@@ -25,29 +25,7 @@ public class SummaryStore
         _lastRunPath = Path.ChangeExtension(filePath, ".lastrun");
         _processed = Load();
     }
-
-    /// <summary>
-    ///     Returns the timestamp of the last run, or null if never run before.
-    /// </summary>
-    public DateTime? GetLastRun()
-    {
-        if (!File.Exists(_lastRunPath))
-            return null;
-
-        var text = File.ReadAllText(_lastRunPath).Trim();
-        if (DateTime.TryParse(text, out var lastRun))
-            return lastRun;
-
-        return null;
-    }
-
-    /// <summary>
-    ///     Updates the last run timestamp to now.
-    /// </summary>
-    public void UpdateLastRun()
-    {
-        File.WriteAllText(_lastRunPath, DateTime.UtcNow.ToString("O"));
-    }
+    
 
     /// <summary>
     ///     Checks if a video has already been processed.

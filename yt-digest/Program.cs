@@ -19,10 +19,11 @@ internal class Program
             else
             {
                 var digestPath = await CreateDigestFile();
-                Console.WriteLine($"Digest saved to: {digestPath}");
+                
 
                 if (!string.IsNullOrEmpty(digestPath))
                 {
+                    Console.WriteLine($"Digest saved to: {digestPath}");
                     OpenFile(digestPath);
                 }
             }
@@ -42,7 +43,7 @@ internal class Program
         }
 
         var summaryService = SummaryServiceFactory.Create();
-        var store = new SummaryStore("processed_videos.json");
+        var store = new SummaryStore(AppPaths.ProcessedVideosFile);
         var ytService = new YtDlpService();
         var digest = new DigestBuilder();
 
@@ -55,8 +56,6 @@ internal class Program
         {
             await ProcessChannelAsync(channel, ytService, summaryService, store, digest);
         }
-
-        store.UpdateLastRun();
 
         var digestPath = await digest.SaveAsync();
 
@@ -120,14 +119,16 @@ internal class Program
 
     private static async Task<List<ChannelConfig>> LoadChannelsAsync()
     {
-        if (!File.Exists(Constants.ChannelsFile))
+        if (!File.Exists(AppPaths.ChannelsFile))
         {
-            Console.WriteLine($"Error: Config file not found: {Constants.ChannelsFile}");
-            Console.WriteLine("\tCreate this file with one YouTube channel URL per line.");
+            await File.WriteAllTextAsync(AppPaths.ChannelsFile,
+                "# Add one YouTube channel URL per line.\n# Example:\n# https://www.youtube.com/@SomeChannel/videos[,subtitle-lang}\n");
+            Console.WriteLine($"Created channels file: {AppPaths.ChannelsFile}");
+            Console.WriteLine("\tAdd YouTube channel URLs and run again.");
             return [];
         }
 
-        var channels = (await File.ReadAllLinesAsync(Constants.ChannelsFile))
+        var channels = (await File.ReadAllLinesAsync(AppPaths.ChannelsFile))
             .Select(line => line.Trim())
             .Where(line => !string.IsNullOrEmpty(line) && !line.StartsWith("#"))
             .Select(ChannelConfig.Parse)
@@ -135,7 +136,7 @@ internal class Program
 
         if (channels.Count == 0)
         {
-            Console.WriteLine($"Error: No channels configured in {Constants.ChannelsFile}");
+            Console.WriteLine($"Error: No channels configured in {AppPaths.ChannelsFile}");
         }
 
         return channels;
@@ -191,8 +192,8 @@ internal class Program
         var summary = await summaryService.SummarizeAsync(video, transcript);
 
         // Save individual summary
-        Directory.CreateDirectory("summaries");
-        var outputPath = Path.Combine("summaries", $"{video.Id}.md");
+        Directory.CreateDirectory(AppPaths.SummariesDir);
+        var outputPath = Path.Combine(AppPaths.SummariesDir, $"{video.Id}.md");
         await File.WriteAllTextAsync(outputPath, summary);
 
         // Add to digest and mark as processed

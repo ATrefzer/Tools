@@ -35,20 +35,29 @@ The tool will:
 
 #### Output
 
+All data is stored in the platform app data directory:
+
+| Platform | Path |
+| -------- | ---- |
+| Linux    | `~/.local/share/yt-digest/` |
+| Windows  | `%LOCALAPPDATA%\yt-digest\` |
+| macOS    | `~/Library/Application Support/yt-digest/` |
+
 ```
 yt-digest/
 ├── summaries/            ← Individual summaries (one per video)
 ├── digests/              ← Combined digests per run (named by date)
 ├── temp/                 ← Temporary .vtt subtitle files (can be deleted)
 ├── processed_videos.json ← Record of already-processed videos
-└── channels.txt          ← Channel configuration
+├── channels.txt          ← Channel configuration
+└── key.txt               ← Claude API key (optional)
 ```
 
 Videos without subtitles are recorded as processed and will not be retried on subsequent runs.
 
 #### Configuration: channels.txt
 
-Edit the channels.txt file to contain all channels included in the digest.
+The file is created automatically on first run. Edit it to contain all channels included in the digest.
 
 One channel per line, with an optional language code:
 
@@ -105,8 +114,9 @@ Better summaries, pay-per-use (a few cents per video).
 You have two options to pass the API Key to the tool.
 
 **Option 1: key.txt (recommended)**
+
+Create a file named `key.txt` in the app data directory (see Output section) containing only the API key:
 ```
-# Create a file named "key.txt" in the publish folder containing only the API key:
 sk-ant-api03-...
 ```
 

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using YoutubeDigest;
 
 namespace YoutubeDigest.Services;
 
@@ -47,8 +48,8 @@ public class DigestBuilder
             return string.Empty;
         }
 
-        Directory.CreateDirectory("digests");
-        var path = Path.Combine("digests", $"{_timestamp:yyyy-MM-dd_HH-mm}.md");
+        Directory.CreateDirectory(AppPaths.DigestsDir);
+        var path = Path.Combine(AppPaths.DigestsDir, $"{_timestamp:yyyy-MM-dd_HH-mm}.md");
         await File.WriteAllTextAsync(path, _content.ToString());
 
 
