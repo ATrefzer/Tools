@@ -15,4 +15,6 @@ internal static class AppPaths
     {
         Directory.CreateDirectory(AppDataDir);
     }
+
+    public static readonly string TempDir = Path.Combine(AppDataDir, "Temp");
 }

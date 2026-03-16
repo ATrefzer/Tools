@@ -44,7 +44,7 @@ internal class Program
 
         var summaryService = SummaryServiceFactory.Create();
         var store = new SummaryStore(AppPaths.ProcessedVideosFile);
-        var ytService = new YtDlpService();
+        var ytService = new YtDlpService(AppPaths.TempDir);
         var digest = new DigestBuilder();
 
         Console.WriteLine("YouTube Digest started");
@@ -97,7 +97,7 @@ internal class Program
         var summaryService = SummaryServiceFactory.Create();
 
 
-        var ytDlp = new YtDlpService();
+        var ytDlp = new YtDlpService(AppPaths.TempDir);
 
         await Console.Error.WriteLineAsync("Fetching video info...");
         var video = await ytDlp.GetVideoInfoAsync(videoUrl);
