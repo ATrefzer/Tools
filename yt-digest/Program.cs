@@ -8,6 +8,12 @@ internal class Program
 {
     public static async Task Main(string[] args)
     {
+        // Simple format
+        //var text = VttParser.ParseFile("C:\\Users\\ATrefzer\\AppData\\Local\\yt-digest\\temp\\QOE_uXsAc4I.de-DE.vtt");
+
+        // Karaoke format
+        //text = VttParser.ParseFile("C:\\Users\\ATrefzer\\AppData\\Local\\yt-digest\\summaries\\a-Tq53g2Ows.de.vtt");
+
         try
         {
             // Single-video mode: yt-digest <url> [--lang <language>]

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using SubtitlesParserV2;
 using YoutubeDigest.Models;
 
 namespace YoutubeDigest.Services;
@@ -100,7 +99,7 @@ public class YtDlpService
         if (vttFile is null)
         {
             Console.WriteLine("No subtitles found for this video. See available sub-titles:");
-            args = $"--list.subs \"{videoUrl}\"";
+            args = $"--list-subs \"{videoUrl}\"";
 
             var result = await RunAsync(args);
             Console.WriteLine(result);
@@ -111,25 +110,7 @@ public class YtDlpService
             return string.Empty;
         }
 
-        return ParseVtt(vttFile);
-    }
-
-    /// <summary>
-    ///     Parses a .vtt file into readable plain text.
-    /// </summary>
-    private static string ParseVtt(string vttFile)
-    {
-        using var fileStream = File.OpenRead(vttFile);
-
-        // Use a parser. The vtt data comes in various formats.
-        var result = SubtitleParser.ParseStream(fileStream);
-        if (result is null)
-        {
-            return string.Empty;
-        }
-
-        var merged = result.Subtitles.SelectMany(s => s.Lines);
-        return string.Join(" ", merged);
+        return VttParser.ParseFile(vttFile);
     }
 
     /// <summary>
