@@ -2,7 +2,7 @@
 
 [TOC]
 
-Automatically summarize YouTube videos using yt-dlp and AI (Claude or Ollama).
+Automatically summarize YouTube videos using yt-dlp and AI (Claude, DeepSeek, or Ollama).
 
 Note: Summary output is in German, you can change this in class Prompt.
 
@@ -50,7 +50,8 @@ yt-digest/
 ├── temp/                 ← Temporary .vtt subtitle files (can be deleted)
 ├── processed_videos.json ← Record of already-processed videos
 ├── channels.txt          ← Channel configuration
-└── key.txt               ← Claude API key (optional)
+├── claude.key            ← Claude API key (optional)
+└── deepseek.key          ← DeepSeek API key (optional)
 ```
 
 Videos without subtitles are recorded as processed and will not be retried on subsequent runs.
@@ -101,21 +102,20 @@ yt-digest.exe https://www.youtube.com/watch?v=VIDEO_ID > summary.md
 
 ## AI Backend
 
-The tool supports two AI backends:
+The tool supports three AI backends. Priority order:
 
-### Option A: Claude (recommended)
+1. **Claude** — `claude.key` file or `ANTHROPIC_API_KEY` env var
+2. **DeepSeek** — `deepseek.key` file or `DEEPSEEK_API_KEY` env var
+3. **Ollama** — automatic fallback (no key required)
 
-Better summaries, pay-per-use (a few cents per video).
+### Option A: Claude
 
 1. Create an account: https://console.anthropic.com/
-2. Add credits (from $5, prepaid)
-3. Create an API key
+2. Add credits and create an API key
 
-You have two options to pass the API Key to the tool.
+**Option 1: claude.key (recommended)**
 
-**Option 1: key.txt (recommended)**
-
-Create a file named `key.txt` in the app data directory (see Output section) containing only the API key:
+Create a file named `claude.key` in the app data directory (see Output section) containing only the API key:
 ```
 sk-ant-api03-...
 ```
@@ -129,9 +129,30 @@ set ANTHROPIC_API_KEY=sk-ant-...
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-`key.txt` takes precedence over the environment variable.
+### Option B: DeepSeek
 
-### Option B: Ollama (free, local)
+Good quality summaries, very low cost.
+
+1. Create an account: https://platform.deepseek.com/
+2. Add credits and create an API key
+
+**Option 1: deepseek.key (recommended)**
+
+Create a file named `deepseek.key` in the app data directory containing only the API key:
+```
+sk-...
+```
+
+**Option 2: Environment variable**
+```bash
+# Windows (CMD)
+set DEEPSEEK_API_KEY=sk-...
+
+# Linux
+export DEEPSEEK_API_KEY=sk-...
+```
+
+### Option C: Ollama (free, local)
 
 Runs entirely offline, requires decent hardware (8 GB+ RAM).
 
@@ -142,4 +163,4 @@ ollama pull llama3.2
 ```
 3. Ollama runs automatically in the background (http://localhost:11434)
 
-> If `ANTHROPIC_API_KEY` is not set, the tool falls back to Ollama automatically.
+> If no API key is configured, the tool falls back to Ollama automatically.
