@@ -12,6 +12,7 @@ public class Prompt
         return $"""
 
                 Analyze the following video transcript and summarize the key points.
+                If there are any recommendations for action, make sure they are summarized in a clear and concise manner.
                 Keep the summary and video title in the language of the video transcript.
 
                 Title: {video.Title}

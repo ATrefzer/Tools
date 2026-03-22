@@ -32,7 +32,7 @@ public class YtDlpService
         return new VideoInfo
         {
             Id = parts.Length > 0 ? parts[0].Trim() : "",
-            Title = parts.Length > 1 ? parts[1].Trim() : videoUrl
+            Title = parts.Length > 1 ? Uri.UnescapeDataString(parts[1].Trim()) : videoUrl
         };
     }
 
@@ -59,7 +59,7 @@ public class YtDlpService
             videos.Add(new VideoInfo
             {
                 Id = parts[0].Trim(),
-                Title = parts[1].Trim()
+                Title = Uri.UnescapeDataString(parts[1].Trim())
             });
         }
 

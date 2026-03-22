@@ -5,42 +5,36 @@ namespace YoutubeDigest.Services;
 /// </summary>
 public static class SummaryServiceFactory
 {
-    private static readonly string KeyFile = AppPaths.KeyFile;
-
     /// <summary>
     ///     Creates a summary service based on available configuration.
-    ///     Priority: 1) key.txt file, 2) ANTHROPIC_API_KEY env var, 3) Ollama fallback
+    ///     Priority:
+    ///     1 claude.key file
+    ///     2 ANTHROPIC_API_KEY env var
+    ///     3 deepseek.key file
+    ///     4 DEEPSEEK_API_KEY env var
+    ///     5 Ollama fallback
     /// </summary>
     public static ISummaryService Create()
     {
-        var promptBuilder = new Prompt();
-        var anthropicApiKey = LoadAnthropicApiKey();
+        var prompt = new Prompt();
 
-        if (!string.IsNullOrEmpty(anthropicApiKey))
-        {
-            var service = new ClaudeService(anthropicApiKey, promptBuilder);
-            return service;
-        }
-        else
-        {
-            var service = new OllamaService(promptBuilder);
-            return service;
-        }
+        var claudeKey = LoadKey(AppPaths.ClaudeKeyFile) ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        if (!string.IsNullOrEmpty(claudeKey))
+            return new ClaudeService(claudeKey, prompt);
+
+        var deepSeekKey = LoadKey(AppPaths.DeepSeekKeyFile) ?? Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
+        if (!string.IsNullOrEmpty(deepSeekKey))
+            return new DeepSeekService(deepSeekKey, prompt);
+
+        return new OllamaService(prompt);
     }
 
-    private static string? LoadAnthropicApiKey()
+    private static string? LoadKey(string path)
     {
-        // 1. Try key.txt file first
-        if (File.Exists(KeyFile))
-        {
-            var key = File.ReadAllText(KeyFile).Trim();
-            if (!string.IsNullOrEmpty(key))
-            {
-                return key;
-            }
-        }
+        if (!File.Exists(path))
+            return null;
 
-        // 2. Fall back to environment variable
-        return Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        var key = File.ReadAllText(path).Trim();
+        return string.IsNullOrEmpty(key) ? null : key;
     }
 }
