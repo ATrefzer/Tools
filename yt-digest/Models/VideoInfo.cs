@@ -55,6 +55,6 @@ public record ChannelConfig
         if ((name == "c" || name == "channel") && segments.Length > 1)
             name = segments[1];
 
-        return name;
+        return Uri.UnescapeDataString(name);
     }
 }
