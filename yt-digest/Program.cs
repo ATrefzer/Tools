@@ -17,14 +17,14 @@ internal class Program
         try
         {
             // Single-video mode: yt-digest <url> [--lang <language>]
-            var (videoUrl, language) = ParseCommandLine(args);
+            var (videoUrl, language, summaryLanguage) = ParseCommandLine(args);
             if (videoUrl != null)
             {
-                await PrintSingleVideoSummary(videoUrl, language);
+                await PrintSingleVideoSummary(videoUrl, language, summaryLanguage);
             }
             else
             {
-                var digestPath = await CreateDigestFile();
+                var digestPath = await CreateDigestFile(summaryLanguage);
                 
 
                 if (!string.IsNullOrEmpty(digestPath))
@@ -40,7 +40,7 @@ internal class Program
         }
     }
 
-    private static async Task<string> CreateDigestFile()
+    private static async Task<string> CreateDigestFile(string? summaryLanguage = null)
     {
         var channels = await LoadChannelsAsync();
         if (channels.Count == 0)
@@ -48,7 +48,7 @@ internal class Program
             return string.Empty;
         }
 
-        var summaryService = SummaryServiceFactory.Create();
+        var summaryService = SummaryServiceFactory.Create(summaryLanguage);
         var store = new SummaryStore(AppPaths.ProcessedVideosFile);
         var ytService = new YtDlpService(AppPaths.TempDir);
         var digest = new DigestBuilder();
@@ -87,20 +87,26 @@ internal class Program
         }
     }
 
-    private static (string? videoUrl, string language) ParseCommandLine(string[] args)
+    private static (string? videoUrl, string language, string? summaryLanguage) ParseCommandLine(string[] args)
     {
         var langIndex = Array.IndexOf(args, "--lang");
         var language = langIndex >= 0 && langIndex + 1 < args.Length ? args[langIndex + 1] : "en";
+
+        var summaryLangIndex = Array.IndexOf(args, "--summary-lang");
+        var summaryLanguage = summaryLangIndex >= 0 && summaryLangIndex + 1 < args.Length
+            ? args[summaryLangIndex + 1]
+            : null;
+
         var videoUrl =
             args.FirstOrDefault(a => a.StartsWith("http://") || a.StartsWith("https://") || a.StartsWith("www."));
-        return (videoUrl, language);
+        return (videoUrl, language, summaryLanguage);
     }
 
-    private static async Task PrintSingleVideoSummary(string videoUrl, string language)
+    private static async Task PrintSingleVideoSummary(string videoUrl, string language, string? summaryLanguage)
     {
         // Info messages are written to stderr to keep stdout clean for potential redirection.
 
-        var summaryService = SummaryServiceFactory.Create();
+        var summaryService = SummaryServiceFactory.Create(summaryLanguage);
 
 
         var ytDlp = new YtDlpService(AppPaths.TempDir);

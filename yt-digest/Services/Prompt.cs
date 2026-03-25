@@ -7,13 +7,24 @@ namespace YoutubeDigest.Services;
 /// </summary>
 public class Prompt
 {
+    private readonly string? _summaryLanguage;
+
+    public Prompt(string? summaryLanguage = null)
+    {
+        _summaryLanguage = summaryLanguage;
+    }
+
     public string GetSummaryPrompt(VideoInfo video, string transcript)
     {
+        var languageInstruction = _summaryLanguage is not null
+            ? $"Generate the summary in {_summaryLanguage}."
+            : "Keep the summary and video title in the language of the video transcript.";
+
         return $"""
 
                 Analyze the following video transcript and summarize the key points.
                 If there are any recommendations for action, make sure they are summarized in a clear and concise manner.
-                Keep the summary and video title in the language of the video transcript.
+                {languageInstruction}
 
                 Title: {video.Title}
 

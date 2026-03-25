@@ -14,9 +14,9 @@ public static class SummaryServiceFactory
     ///     4 DEEPSEEK_API_KEY env var
     ///     5 Ollama fallback
     /// </summary>
-    public static ISummaryService Create()
+    public static ISummaryService Create(string? summaryLanguage = null)
     {
-        var prompt = new Prompt();
+        var prompt = new Prompt(summaryLanguage);
 
         var claudeKey = LoadKey(AppPaths.ClaudeKeyFile) ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
         if (!string.IsNullOrEmpty(claudeKey))
