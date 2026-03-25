@@ -16,16 +16,21 @@ internal class Program
 
         try
         {
-            // Single-video mode: yt-digest <url> [--lang <language>]
-            var (videoUrl, language, summaryLanguage) = ParseCommandLine(args);
-            if (videoUrl != null)
+            var options = CommandLineOptions.Parse(args);
+
+            if (options.ShowHelp)
             {
-                await PrintSingleVideoSummary(videoUrl, language, summaryLanguage);
+                PrintHelp();
+                return;
+            }
+
+            if (options.VideoUrl != null)
+            {
+                await PrintSingleVideoSummary(options);
             }
             else
             {
-                var digestPath = await CreateDigestFile(summaryLanguage);
-                
+                var digestPath = await CreateDigestFile(options);
 
                 if (!string.IsNullOrEmpty(digestPath))
                 {
@@ -40,7 +45,7 @@ internal class Program
         }
     }
 
-    private static async Task<string> CreateDigestFile(string? summaryLanguage = null)
+    private static async Task<string> CreateDigestFile(CommandLineOptions options)
     {
         var channels = await LoadChannelsAsync();
         if (channels.Count == 0)
@@ -48,19 +53,20 @@ internal class Program
             return string.Empty;
         }
 
-        var summaryService = SummaryServiceFactory.Create(summaryLanguage);
+        var summaryService = SummaryServiceFactory.Create(options.SummaryLang);
         var store = new SummaryStore(AppPaths.ProcessedVideosFile);
         var ytService = new YtDlpService(AppPaths.TempDir);
         var digest = new DigestBuilder();
 
         Console.WriteLine("YouTube Digest started");
-        Console.WriteLine($"\tAI       : {summaryService.ModelName}");
-        Console.WriteLine($"\tChannels : {channels.Count}");
+        Console.WriteLine($"\tAI         : {summaryService.ModelName}");
+        Console.WriteLine($"\tChannels   : {channels.Count}");
+        Console.WriteLine($"\tMax videos : {options.MaxVideos}");
         Console.WriteLine();
 
         foreach (var channel in channels)
         {
-            await ProcessChannelAsync(channel, ytService, summaryService, store, digest);
+            await ProcessChannelAsync(channel, options.MaxVideos, ytService, summaryService, store, digest);
         }
 
         var digestPath = await digest.SaveAsync();
@@ -69,7 +75,6 @@ internal class Program
 
         return digestPath;
     }
-
 
     public static void OpenFile(string path)
     {
@@ -87,35 +92,65 @@ internal class Program
         }
     }
 
-    private static (string? videoUrl, string language, string? summaryLanguage) ParseCommandLine(string[] args)
+    private static void PrintHelp()
     {
-        var langIndex = Array.IndexOf(args, "--lang");
-        var language = langIndex >= 0 && langIndex + 1 < args.Length ? args[langIndex + 1] : "en";
+        Console.WriteLine("""
+            YouTube Digest - Summarize YouTube videos using AI
 
-        var summaryLangIndex = Array.IndexOf(args, "--summary-lang");
-        var summaryLanguage = summaryLangIndex >= 0 && summaryLangIndex + 1 < args.Length
-            ? args[summaryLangIndex + 1]
-            : null;
+            USAGE
+              yt-digest              Digest mode. Process all channels from channels.txt.
+                                     Output to markdown file.
+              yt-digest <url>        Summarize a single video.
+                                     Output to console.
+              yt-digest --help       Show this help
 
-        var videoUrl =
-            args.FirstOrDefault(a => a.StartsWith("http://") || a.StartsWith("https://") || a.StartsWith("www."));
-        return (videoUrl, language, summaryLanguage);
+            OPTIONS
+              --lang <code>          Subtitle language to download (default: en)
+                                     Examples: en, de
+              --summary-lang <lang>  Language for the generated summary
+                                     Defaults to the transcript language
+                                     Examples: German, English etc.
+              --max-videos <n>       Max videos to fetch per channel in digest mode
+                                     Default: 2
+
+            EXAMPLES
+              yt-digest
+              yt-digest https://www.youtube.com/watch?v=VIDEO_ID
+              yt-digest https://www.youtube.com/watch?v=VIDEO_ID --lang de
+              yt-digest https://www.youtube.com/watch?v=VIDEO_ID --summary-lang German
+              yt-digest --summary-lang German
+              yt-digest --max-videos 5
+              yt-digest https://... --lang en --summary-lang German > summary.md
+
+            CONFIGURATION
+              All files are stored in the app data directory:
+                Windows : %LOCALAPPDATA%\yt-digest\
+                Linux   : ~/.local/share/yt-digest/
+                macOS   : ~/Library/Application Support/yt-digest/
+
+              channels.txt  Channels to process in digest mode (one URL per line, optional ,lang suffix)
+              claude.key    Anthropic Claude API key
+              deepseek.key  DeepSeek API key
+
+            AI BACKEND PRIORITY
+              1. claude.key / ANTHROPIC_API_KEY
+              2. deepseek.key / DEEPSEEK_API_KEY
+              3. Ollama (local fallback, http://localhost:11434)
+            """);
     }
 
-    private static async Task PrintSingleVideoSummary(string videoUrl, string language, string? summaryLanguage)
+    private static async Task PrintSingleVideoSummary(CommandLineOptions options)
     {
         // Info messages are written to stderr to keep stdout clean for potential redirection.
 
-        var summaryService = SummaryServiceFactory.Create(summaryLanguage);
-
-
+        var summaryService = SummaryServiceFactory.Create(options.SummaryLang);
         var ytDlp = new YtDlpService(AppPaths.TempDir);
 
         await Console.Error.WriteLineAsync("Fetching video info...");
-        var video = await ytDlp.GetVideoInfoAsync(videoUrl);
+        var video = await ytDlp.GetVideoInfoAsync(options.VideoUrl!);
 
-        await Console.Error.WriteLineAsync($"Downloading subtitles ({language})...");
-        var transcript = await ytDlp.DownloadSubtitlesAsync(video.Id, language);
+        await Console.Error.WriteLineAsync($"Downloading subtitles ({options.SubtitleLang})...");
+        var transcript = await ytDlp.DownloadSubtitlesAsync(video.Id, options.SubtitleLang);
         if (string.IsNullOrWhiteSpace(transcript))
         {
             Console.WriteLine("No subtitles available for this video.");
@@ -156,18 +191,19 @@ internal class Program
 
     private static async Task ProcessChannelAsync(
         ChannelConfig channel,
+        int maxVideos,
         YtDlpService ytDlp,
         ISummaryService summaryService,
         SummaryStore store,
         DigestBuilder digest)
     {
         Console.WriteLine($"Channel: {channel.Url} ({channel.Language})");
-        Console.WriteLine($"\tFetching last {Constants.MaxVideosPerChannel} videos...");
+        Console.WriteLine($"\tFetching last {maxVideos} videos...");
 
-        var allVideos = await ytDlp.GetRecentVideosAsync(channel.Url, Constants.MaxVideosPerChannel);
+        var allVideos = await ytDlp.GetRecentVideosAsync(channel.Url, maxVideos);
         var newVideos = allVideos
             .Where(v => !store.IsProcessed(v.Id))
-            .Take(Constants.MaxVideosPerChannel)
+            .Take(maxVideos)
             .ToList();
 
         Console.WriteLine($"\t{newVideos.Count} new videos to process.\n");
