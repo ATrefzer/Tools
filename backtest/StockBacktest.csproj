@@ -10,12 +10,16 @@
         <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
         <Optimize>true</Optimize>
         <PublishSingleFile>true</PublishSingleFile>
-        <PublishTrimmed>true</PublishTrimmed>
+        <PublishTrimmed>false</PublishTrimmed>
         <SelfContained>true</SelfContained>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
+        <PackageReference Include="Finance.NET" Version="1.1.14"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Services\"/>
     </ItemGroup>
 
 </Project>

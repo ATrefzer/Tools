@@ -1,272 +1,179 @@
-using System.CommandLine;
 using System.Globalization;
 using System.Text.Json;
+using AngleSharp.Html.Dom;
+using Finance.Net.Extensions;
+using Finance.Net.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using StockBacktest.Calculators;
+using StockBacktest.Converters;
 using StockBacktest.Models;
-using StockBacktest.Services;
 
 namespace StockBacktest;
 
-internal class Program
+internal static class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        var jsonContext = Converters.BacktestJsonContext.Default;
-
-        // Shared HttpClient
-        var handler = new HttpClientHandler();
-        var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
-
-        // CLI definition 
-        var identifierOption = new Option<string>(
-                "--identifier",
-                "Stock identifier (ISIN, WKN or Ticker symbol)")
-            { IsRequired = true };
-
-        var typeOption = new Option<string?>(
-            "--type",
-            () => null,
-            "Identifier type: ISIN | WKN | Ticker (default: Ticker)");
-
-        var buyOption = new Option<string>(
-                "--buy",
-                "Buy date (yyyy-MM-dd)")
-            { IsRequired = true };
-
-        var sellOption = new Option<string?>(
-            "--sell",
-            () => null,
-            "Sell date (yyyy-MM-dd). Defaults to today.");
-
-        var rootCommand = new RootCommand("Stock backtesting tool — outputs JSON to stdout")
+        if (args.Length == 0 || args[0] is "--help" or "-h")
         {
-            identifierOption,
-            typeOption,
-            buyOption,
-            sellOption
-        };
+            await Console.Error.WriteLineAsync("Usage: backtest <ticker> [--buy yyyy-MM-dd] [--sell yyyy-MM-dd]");
+            await Console.Error.WriteLineAsync("  <ticker>          Ticker symbol, e.g. SAP.DE or AAPL");
+            await Console.Error.WriteLineAsync("  --buy yyyy-MM-dd  Buy date. Omit to get the latest known price.");
+            await Console.Error.WriteLineAsync("  --sell yyyy-MM-dd Sell date. Defaults to today.");
+            return 0;
+        }
 
-        rootCommand.SetHandler(async ctx =>
+        // Simple arg parsing: first non-flag arg = ticker, --key value pairs for the rest
+        BacktestRequest request;
+        try
         {
-            var identifier  = ctx.ParseResult.GetValueForOption(identifierOption)!;
-            var typeStr     = ctx.ParseResult.GetValueForOption(typeOption);
-            var buyStr      = ctx.ParseResult.GetValueForOption(buyOption)!;
-            var sellStr     = ctx.ParseResult.GetValueForOption(sellOption);
+            request = CreateBackTestRequest(args);
 
-            IdentifierType type;
-            if (typeStr is null)
-            {
-                type = IdentifierType.Ticker;
-            }
-            else if (!Enum.TryParse(typeStr, ignoreCase: true, out type))
-            {
-                WriteError($"Invalid --type value: '{typeStr}'. Use ISIN, WKN or Ticker");
-                ctx.ExitCode = 1;
-                return;
-            }
 
-            if (!TryParseDate(buyStr, out var buyDate))
-            {
-                WriteError($"Invalid --buy format: '{buyStr}'. Use yyyy-MM-dd");
-                ctx.ExitCode = 1;
-                return;
-            }
+            var services = new ServiceCollection();
+            services.AddFinanceNet();
+            var yahoo = services.BuildServiceProvider().GetRequiredService<IYahooFinanceService>();
 
-            DateOnly? sellDate = null;
-            if (sellStr is not null)
-            {
-                if (!TryParseDate(sellStr, out var sd))
-                {
-                    WriteError($"Invalid --sell format: '{sellStr}'. Use yyyy-MM-dd");
-                    ctx.ExitCode = 1;
-                    return;
-                }
+            var result = await RunBacktestAsync(request, yahoo);
+            Console.WriteLine(JsonSerializer.Serialize(result, BacktestJsonContext.Default.BacktestResult));
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine(e);
+            return 1;
+        }
 
-                sellDate = sd;
-            }
-
-            var request = new BacktestRequest
-            {
-                Identifier = identifier,
-                Type = type,
-                BuyDate = buyDate,
-                SellDate = sellDate
-            };
-
-            var result = await RunBacktestAsync(request, http);
-            Console.WriteLine(JsonSerializer.Serialize(result, jsonContext.BacktestResult));
-            ctx.ExitCode = result.Errors.Count > 0 && result.BuyPrice is null ? 1 : 0;
-        });
-
-        return await rootCommand.InvokeAsync(args);
+        return 0;
     }
 
-    private static async Task<BacktestResult> RunBacktestAsync(BacktestRequest request, HttpClient http)
+    private static BacktestRequest CreateBackTestRequest(string[] args)
     {
-        var errors = new List<string>();
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        string? ticker = null;
+        string? buyStr = null;
+        string? sellStr = null;
 
-        string? resolvedTicker = null;
-        string? resolvedName = null;
-
-        // 1. Resolve ticker if needed
-        if (request.Type == IdentifierType.Ticker)
+        for (var i = 0; i < args.Length; i++)
         {
-            resolvedTicker = request.Identifier;
+            switch (args[i])
+            {
+                case "--buy" when i + 1 < args.Length:
+                    buyStr = args[++i];
+                    break;
+                case "--sell" when i + 1 < args.Length:
+                    sellStr = args[++i];
+                    break;
+                default:
+                    if (!args[i].StartsWith("--"))
+                    {
+                        ticker = args[i];
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Unknown option: '{args[i]}'");
+                    }
+
+                    break;
+            }
+        }
+
+        if (ticker is null)
+        {
+            throw new ArgumentException(
+                "Missing ticker symbol. Usage: backtest <ticker> [--buy yyyy-MM-dd] [--sell yyyy-MM-dd]");
+        }
+
+        DateTime? buyDate = null;
+        if (buyStr is not null)
+        {
+            if (!TryParseDate(buyStr, out var bd))
+            {
+                throw new ArgumentException($"Invalid --buy format: '{buyStr}'. Use yyyy-MM-dd");
+            }
+
+            buyDate = bd;
+        }
+
+        DateTime? sellDate = null;
+        if (sellStr is not null)
+        {
+            if (!TryParseDate(sellStr, out var sd))
+            {
+                throw new ArgumentException($"Invalid --sell format: '{sellStr}'. Use yyyy-MM-dd");
+            }
+
+            sellDate = sd;
+        }
+
+        var request = new BacktestRequest
+        {
+            Ticker = ticker,
+            BuyDate = buyDate,
+            SellDate = sellDate
+        };
+        return request;
+    }
+
+    private static async Task<BacktestResult> RunBacktestAsync(
+        BacktestRequest request, IYahooFinanceService yahoo)
+    {
+        BacktestResult? result = null;
+
+        var quote = await yahoo.GetQuoteAsync(request.Ticker);
+        if (request.BuyDate is null)
+        {
+            result = new BacktestResult
+            {
+                Ticker = request.Ticker,
+                Currency = quote.Currency,
+                BuyDate = DateTime.Now,
+                BuyPrice = (decimal?)quote.RegularMarketPrice.GetValueOrDefault(0.0),
+            };
         }
         else
         {
-            Console.Error.WriteLine($"Resolving {request.Type} {request.Identifier}...");
+            var tmp  = await yahoo.GetRecordsAsync(request.Ticker, request.BuyDate, request.SellDate,
+                CancellationToken.None);
+            var records = tmp.OrderBy(r => r.Date).ToList();
 
-            var openFigi = new OpenFigiResolver(http);
-            var resolved = await openFigi.ResolveAsync(request.Identifier, request.Type);
+            // No buy date → return latest known price only
+            
+            var buy = records.FirstOrDefault();
+            var sell = records.LastOrDefault();
 
-            if (resolved is null)
+
+            var buyPrice = buy?.Close;
+            var buyDate = buy?.Date;
+            var sellPrice = sell?.Close;
+            var sellDate = sell?.Date;
+
+            result = new BacktestResult
             {
-                Console.Error.WriteLine("OpenFIGI returned nothing, trying Yahoo search...");
-                var yahooSearch = new YahooSearchResolver(http);
-                resolved = await yahooSearch.ResolveAsync(request.Identifier, request.Type);
-            }
-
-            if (resolved is null)
-            {
-                errors.Add(
-                    $"Symbol could not be resolved: no results from OpenFIGI or Yahoo Search for '{request.Identifier}'");
-                return new BacktestResult
-                {
-                    Identifier = request.Identifier,
-                    IdentifierType = request.Type.ToString(),
-                    Errors = errors
-                };
-            }
-
-            resolvedTicker = resolved.Ticker;
-            resolvedName = resolved.Name;
-        }
-
-        // 2. Determine sell date
-        var sellDate = request.SellDate ?? today;
-        var isSellToday = sellDate == today;
-
-        if (request.BuyDate >= sellDate)
-        {
-            errors.Add($"Buy date ({request.BuyDate}) must be before sell date ({sellDate})");
-            return new BacktestResult
-            {
-                Identifier = request.Identifier,
-                IdentifierType = request.Type.ToString(),
-                ResolvedTicker = resolvedTicker,
-                ResolvedName = resolvedName,
-                Errors = errors
+                Ticker = request.Ticker,
+                Currency = quote.Currency,
+                BuyDate = buyDate,
+                BuyPrice = buyPrice,
+                SellDate = sellDate,
+                SellPrice = sellPrice
             };
-        }
 
-        // 3. Fetch prices — try Yahoo first, fall back to Stooq
-        var yahoo = new YahooFinanceProvider(http);
-        var stooq = new StooqProvider(http);
 
-        var buyResult = await FetchWithFallback(yahoo, stooq, resolvedTicker, request.BuyDate);
-        var sellResult = await FetchWithFallback(yahoo, stooq, resolvedTicker, sellDate);
-
-        if (buyResult is null)
-        {
-            errors.Add($"Could not fetch buy price for '{resolvedTicker}' around {request.BuyDate}");
-        }
-
-        if (sellResult is null)
-        {
-            errors.Add($"Could not fetch sell price for '{resolvedTicker}' around {sellDate}");
-        }
-
-        if (buyResult is null || sellResult is null)
-        {
-            return new BacktestResult
+            if (buyPrice != null && sellPrice != null && sellDate != null && buyDate != null)
             {
-                Identifier = request.Identifier,
-                IdentifierType = request.Type.ToString(),
-                ResolvedTicker = resolvedTicker,
-                ResolvedName = resolvedName,
-                Errors = errors
-            };
-        }
+                var (absolute, percent, annualized, holdingDays) = ReturnCalculator.Calculate(
+                    buyPrice.Value, sellPrice.Value, buyDate.Value, sellDate.Value);
 
-        var (buyPrice, actualBuyDate, buySource) = buyResult.Value;
-        var (sellPrice, actualSellDate, sellSource) = sellResult.Value;
-        var dataSource = buySource == sellSource ? buySource : $"{buySource}/{sellSource}";
-
-        // 4. Calculate returns
-        var (absolute, percent, annualized, holdingDays) = ReturnCalculator.Calculate(
-            buyPrice, sellPrice, actualBuyDate, actualSellDate);
-
-        // 5. Fetch currency from Yahoo meta (best effort)
-        var currency = await TryGetCurrencyAsync(http, resolvedTicker);
-
-        return new BacktestResult
-        {
-            Identifier = request.Identifier,
-            IdentifierType = request.Type.ToString(),
-            ResolvedTicker = resolvedTicker,
-            ResolvedName = resolvedName,
-            Currency = currency,
-            BuyDate = actualBuyDate,
-            BuyPrice = buyPrice,
-            SellDate = actualSellDate,
-            SellPrice = sellPrice,
-            IsSellDateToday = isSellToday && actualSellDate == today,
-            AbsoluteReturn = absolute,
-            PercentReturn = percent,
-            AnnualizedReturn = annualized,
-            HoldingDays = holdingDays,
-            DataSource = dataSource,
-            CalculatedAt = DateTime.UtcNow,
-            Errors = errors
-        };
-    }
-
-    private static async Task<(decimal Price, DateOnly Date, string Source)?> FetchWithFallback(
-        YahooFinanceProvider yahoo, StooqProvider stooq, string ticker, DateOnly date)
-    {
-        var yahooResult = await yahoo.GetPriceAsync(ticker, date);
-        if (yahooResult.HasValue)
-        {
-            return (yahooResult.Value.Price, yahooResult.Value.ActualDate, yahoo.Name);
-        }
-
-        Console.Error.WriteLine($"Yahoo failed for {ticker} on {date}, trying Stooq...");
-        var stooqResult = await stooq.GetPriceAsync(ticker, date);
-        if (stooqResult.HasValue)
-        {
-            return (stooqResult.Value.Price, stooqResult.Value.ActualDate, stooq.Name);
-        }
-
-        return null;
-    }
-
-    private static async Task<string?> TryGetCurrencyAsync(HttpClient http, string ticker)
-    {
-        try
-        {
-            var url =
-                $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(ticker)}?interval=1d&range=1d";
-            using var response = await http.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
+                result.AbsoluteReturn = absolute;
+                result.PercentReturn = percent;
+                result.AnnualizedReturn = annualized;
+                result.HoldingDays = holdingDays;
             }
 
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var doc = await JsonDocument.ParseAsync(stream);
-            var meta = doc.RootElement.GetProperty("chart").GetProperty("result")[0].GetProperty("meta");
-            return meta.TryGetProperty("currency", out var c) ? c.GetString() : null;
         }
-        catch
-        {
-            return null;
-        }
+
+        return result;
     }
 
-    private static bool TryParseDate(string? input, out DateOnly result)
+    private static bool TryParseDate(string? input, out DateTime result)
     {
         result = default;
         if (string.IsNullOrWhiteSpace(input))
@@ -274,13 +181,7 @@ internal class Program
             return false;
         }
 
-        return DateOnly.TryParseExact(input.Trim(), "yyyy-MM-dd",
+        return DateTime.TryParseExact(input.Trim(), "yyyy-MM-dd",
             CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
-    }
-
-    private static void WriteError(string message)
-    {
-        var result = new BacktestResult { Errors = [message] };
-        Console.WriteLine(JsonSerializer.Serialize(result, Converters.BacktestJsonContext.Default.BacktestResult));
     }
 }

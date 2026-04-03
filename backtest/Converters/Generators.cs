@@ -8,5 +8,6 @@ namespace StockBacktest.Converters;
     DefaultIgnoreCondition = JsonIgnoreCondition.Never,
     WriteIndented = true)]
 [JsonSerializable(typeof(BacktestResult))]
-[JsonSerializable(typeof(OpenFigiRequest[]))]
-internal partial class BacktestJsonContext : JsonSerializerContext { }
+internal partial class BacktestJsonContext : JsonSerializerContext
+{
+}
