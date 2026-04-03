@@ -43,8 +43,8 @@ public class YahooFinanceService
     public async Task<List<YahooRecord>> GetRecordsAsync(
         string ticker, DateTime? from, DateTime? to, CancellationToken ct = default)
     {
-        var period1 = ToUnix(from ?? DateTime.Today.AddDays(-7));
-        var period2 = ToUnix((to ?? DateTime.Today).AddDays(1));
+        var period1 = ToUnix(from ?? DateTime.Today.AddDays(-7)); // 7 days if from is not provided.
+        var period2 = ToUnix((to ?? DateTime.Today).AddDays(1)); // period2 is exclusive!
         var url =
             $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(ticker)}?interval=1d&period1={period1}&period2={period2}";
         await Console.Error.WriteLineAsync($"[Yahoo] GetRecords {ticker} {from:yyyy-MM-dd} → {to:yyyy-MM-dd}");

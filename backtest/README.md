@@ -26,10 +26,10 @@ backtest --search <query>
 ### Examples
 
 ```bash
-# Current market price
+# Current live market price
 backtest SAP.DE
 
-# Backtest from buy date until today
+# Backtest from buy date until today (historical closing prices)
 backtest SAP.DE --buy 2020-01-15
 
 # Backtest with explicit sell date
@@ -37,6 +37,9 @@ backtest SAP.DE --buy 2020-01-15 --sell 2024-06-01
 
 # Full price series for plotting, written to a file
 backtest SAP.DE --prices --buy 2020-01-15 > sap_prices.json
+
+# Full price series for the last 7 days (no --buy given)
+backtest SAP.DE --prices
 
 # Search for a ticker by company name
 backtest --search "Volkswagen"
