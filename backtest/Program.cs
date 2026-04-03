@@ -17,6 +17,8 @@ internal static class Program
             await Console.Error.WriteLineAsync("  <ticker>          Ticker symbol, e.g. SAP.DE or AAPL");
             await Console.Error.WriteLineAsync("  --buy yyyy-MM-dd  Buy date. Omit to get the latest known price.");
             await Console.Error.WriteLineAsync("  --sell yyyy-MM-dd Sell date. Defaults to today.");
+            await Console.Error.WriteLineAsync("  --search <query>  Search for a ticker by company name.");
+            await Console.Error.WriteLineAsync("  --prices          Output full price series as JSON array for plotting.");
             return 0;
         }
 
@@ -24,11 +26,33 @@ internal static class Program
         BacktestRequest request;
         try
         {
+            var searchIndex = Array.IndexOf(args, "--search");
+            if (searchIndex >= 0 && searchIndex + 1 < args.Length)
+            {
+                var query = args[searchIndex + 1];
+                var yahoo = new YahooFinanceService();
+                var results = await yahoo.SearchAsync(query);
+                Console.WriteLine(JsonSerializer.Serialize(results.ToArray(), BacktestJsonContext.Default.YahooSearchResultArray));
+                return 0;
+            }
+
+            var pricesMode = args.Contains("--prices");
             request = CreateBackTestRequest(args);
 
+            var yahooService = new YahooFinanceService();
 
-            var yahoo = new YahooFinanceService();
-            var result = await RunBacktestAsync(request, yahoo);
+            if (pricesMode)
+            {
+                var records = await yahooService.GetRecordsAsync(request.Ticker, request.BuyDate, request.SellDate);
+                var points = records
+                    .OrderBy(r => r.Date)
+                    .Select(r => new PricePoint { Date = r.Date.ToString("yyyy-MM-dd"), Price = r.Close ?? 0 })
+                    .ToArray();
+                Console.WriteLine(JsonSerializer.Serialize(points, BacktestJsonContext.Default.PricePointArray));
+                return 0;
+            }
+
+            var result = await RunBacktestAsync(request, yahooService);
             Console.WriteLine(JsonSerializer.Serialize(result, BacktestJsonContext.Default.BacktestResult));
         }
         catch (Exception e)
@@ -55,6 +79,8 @@ internal static class Program
                     break;
                 case "--sell" when i + 1 < args.Length:
                     sellStr = args[++i];
+                    break;
+                case "--prices":
                     break;
                 default:
                     if (!args[i].StartsWith("--"))

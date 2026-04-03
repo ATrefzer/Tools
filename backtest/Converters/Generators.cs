@@ -8,6 +8,8 @@ namespace StockBacktest.Converters;
     DefaultIgnoreCondition = JsonIgnoreCondition.Never,
     WriteIndented = true)]
 [JsonSerializable(typeof(BacktestResult))]
+[JsonSerializable(typeof(YahooSearchResult[]))]
+[JsonSerializable(typeof(PricePoint[]))]
 internal partial class BacktestJsonContext : JsonSerializerContext
 {
 }

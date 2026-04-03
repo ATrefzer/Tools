@@ -16,7 +16,7 @@ public class YahooFinanceService
     public async Task<YahooQuote?> GetQuoteAsync(string ticker, CancellationToken ct = default)
     {
         var url =
-            $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(ticker)}?interval=1d&range=5d";
+            $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(ticker)}";
         await Console.Error.WriteLineAsync($"[Yahoo] GetQuote {ticker}");
 
         using var doc = await FetchAsync(url, ct);
@@ -25,18 +25,18 @@ public class YahooFinanceService
             return null;
         }
 
-        var meta = doc.RootElement
+        var metaObject = doc.RootElement
             .GetProperty("chart")
             .GetProperty("result")[0]
             .GetProperty("meta");
 
         return new YahooQuote
         {
-            Currency = GetString(meta, "currency"),
-            LongName = GetString(meta, "longName"),
-            ShortName = GetString(meta, "shortName"),
-            RegularMarketPrice = GetFloat(meta, "regularMarketPrice"),
-            RegularMarketTime = GetUnixDateTime(meta, "regularMarketTime")
+            Currency = GetString(metaObject, "currency"),
+            LongName = GetString(metaObject, "longName"),
+            ShortName = GetString(metaObject, "shortName"),
+            RegularMarketPrice = GetFloat(metaObject, "regularMarketPrice"),
+            RegularMarketTime = GetUnixDateTime(metaObject, "regularMarketTime")
         };
     }
 
@@ -77,6 +77,30 @@ public class YahooFinanceService
         return records;
     }
 
+    public async Task<List<YahooSearchResult>> SearchAsync(string query, CancellationToken ct = default)
+    {
+        var url = $"https://query2.finance.yahoo.com/v1/finance/search?q={Uri.EscapeDataString(query)}";
+        await Console.Error.WriteLineAsync($"[Yahoo] Search '{query}'");
+
+        using var doc = await FetchAsync(url, ct);
+        if (doc is null) return [];
+
+        var results = new List<YahooSearchResult>();
+        foreach (var quote in doc.RootElement.GetProperty("quotes").EnumerateArray())
+        {
+            var symbol = GetString(quote, "symbol");
+            if (symbol is null) continue;
+
+            results.Add(new YahooSearchResult
+            {
+                Symbol = symbol,
+                Name   = GetString(quote, "longname") ?? GetString(quote, "shortname"),
+                Type   = GetString(quote, "typeDisp")
+            });
+        }
+        return results;
+    }
+
     private static async Task<JsonDocument?> FetchAsync(string url, CancellationToken ct)
     {
         try
@@ -86,7 +110,7 @@ public class YahooFinanceService
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Yahoo] Error: {ex.Message}");
+            await Console.Error.WriteLineAsync($"[Yahoo] Error: {ex.Message}");
             return null;
         }
     }
@@ -110,6 +134,8 @@ public class YahooFinanceService
 
     private static long ToUnix(DateTime dt)
     {
+        // Api expects Unix timestamp: Seconds since 1. January 1970 (UTC).
+        // Date and time like DateTime, but additionally an Offset=0 (UTC) 
         return new DateTimeOffset(dt.ToUniversalTime()).ToUnixTimeSeconds();
     }
 }
