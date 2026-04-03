@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text.Json;
-using AngleSharp.Html.Dom;
 using Finance.Net.Extensions;
 using Finance.Net.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -93,7 +92,7 @@ internal static class Program
             buyDate = bd;
         }
 
-        DateTime? sellDate = null;
+        var sellDate = DateTime.Now;
         if (sellStr is not null)
         {
             if (!TryParseDate(sellStr, out var sd))
@@ -116,58 +115,55 @@ internal static class Program
     private static async Task<BacktestResult> RunBacktestAsync(
         BacktestRequest request, IYahooFinanceService yahoo)
     {
-        BacktestResult? result = null;
-
         var quote = await yahoo.GetQuoteAsync(request.Ticker);
+
+        var result = new BacktestResult
+        {
+            Ticker = request.Ticker,
+            Currency = quote.Currency,
+            Name = quote.LongName ?? quote.ShortName
+        };
+
+
         if (request.BuyDate is null)
         {
-            result = new BacktestResult
+            var price = quote.RegularMarketPrice;
+            result.BuyDate = quote.RegularMarketTime;
+
+            if (price.HasValue)
             {
-                Ticker = request.Ticker,
-                Currency = quote.Currency,
-                BuyDate = DateTime.Now,
-                BuyPrice = (decimal?)quote.RegularMarketPrice.GetValueOrDefault(0.0),
-            };
+                result.BuyPrice = (decimal)price.Value;
+            }
         }
         else
         {
-            var tmp  = await yahoo.GetRecordsAsync(request.Ticker, request.BuyDate, request.SellDate,
+            var tmp = await yahoo.GetRecordsAsync(request.Ticker, request.BuyDate, request.SellDate,
                 CancellationToken.None);
             var records = tmp.OrderBy(r => r.Date).ToList();
 
-            // No buy date → return latest known price only
-            
             var buy = records.FirstOrDefault();
             var sell = records.LastOrDefault();
 
+            result.BuyDate = buy?.Date;
+            result.BuyPrice = buy?.Close;
+            result.SellDate = sell?.Date;
+            result.SellPrice = sell?.Close;
 
-            var buyPrice = buy?.Close;
-            var buyDate = buy?.Date;
-            var sellPrice = sell?.Close;
-            var sellDate = sell?.Date;
 
-            result = new BacktestResult
+            if (result.HasBuyAndSell())
             {
-                Ticker = request.Ticker,
-                Currency = quote.Currency,
-                BuyDate = buyDate,
-                BuyPrice = buyPrice,
-                SellDate = sellDate,
-                SellPrice = sellPrice
-            };
-
-
-            if (buyPrice != null && sellPrice != null && sellDate != null && buyDate != null)
-            {
+                // Append return
                 var (absolute, percent, annualized, holdingDays) = ReturnCalculator.Calculate(
-                    buyPrice.Value, sellPrice.Value, buyDate.Value, sellDate.Value);
+                    result.BuyPrice!.Value, 
+                    result.SellPrice!.Value, 
+                    result.BuyDate!.Value, 
+                    result.SellDate!.Value);
 
                 result.AbsoluteReturn = absolute;
                 result.PercentReturn = percent;
                 result.AnnualizedReturn = annualized;
                 result.HoldingDays = holdingDays;
             }
-
         }
 
         return result;
