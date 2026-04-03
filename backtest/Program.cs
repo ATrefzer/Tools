@@ -1,7 +1,6 @@
 using System.CommandLine;
 using System.Globalization;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using StockBacktest.Calculators;
 using StockBacktest.Models;
 using StockBacktest.Services;
@@ -12,13 +11,7 @@ internal class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-            WriteIndented = true,
-            Converters = { new DateOnlyJsonConverter(), new DateTimeJsonConverter() }
-        };
+        var jsonContext = Converters.BacktestJsonContext.Default;
 
         // Shared HttpClient
         var handler = new HttpClientHandler();
@@ -63,7 +56,7 @@ internal class Program
 
             if (!TryParseDate(buyStr, out var buyDate))
             {
-                await WriteErrorAsync($"Invalid --buy format: '{buyStr}'. Use yyyy-MM-dd", jsonOptions);
+                WriteError($"Invalid --buy format: '{buyStr}'. Use yyyy-MM-dd");
                 ctx.ExitCode = 1;
                 return;
             }
@@ -73,7 +66,7 @@ internal class Program
             {
                 if (!TryParseDate(sellStr, out var sd))
                 {
-                    await WriteErrorAsync($"Invalid --sell format: '{sellStr}'. Use yyyy-MM-dd", jsonOptions);
+                    WriteError($"Invalid --sell format: '{sellStr}'. Use yyyy-MM-dd");
                     ctx.ExitCode = 1;
                     return;
                 }
@@ -90,7 +83,7 @@ internal class Program
             };
 
             var result = await RunBacktestAsync(request, http);
-            Console.WriteLine(JsonSerializer.Serialize(result, jsonOptions));
+            Console.WriteLine(JsonSerializer.Serialize(result, jsonContext.BacktestResult));
             ctx.ExitCode = result.Errors.Count > 0 && result.BuyPrice is null ? 1 : 0;
         });
 
@@ -165,11 +158,17 @@ internal class Program
         var sellResult = await FetchWithFallback(yahoo, stooq, resolvedTicker, sellDate);
 
         if (buyResult is null)
+        {
             errors.Add($"Could not fetch buy price for '{resolvedTicker}' around {request.BuyDate}");
+        }
+
         if (sellResult is null)
+        {
             errors.Add($"Could not fetch sell price for '{resolvedTicker}' around {sellDate}");
+        }
 
         if (buyResult is null || sellResult is null)
+        {
             return new BacktestResult
             {
                 Identifier = request.Identifier,
@@ -178,6 +177,7 @@ internal class Program
                 ResolvedName = resolvedName,
                 Errors = errors
             };
+        }
 
         var (buyPrice, actualBuyDate, buySource) = buyResult.Value;
         var (sellPrice, actualSellDate, sellSource) = sellResult.Value;
@@ -217,12 +217,16 @@ internal class Program
     {
         var yahooResult = await yahoo.GetPriceAsync(ticker, date);
         if (yahooResult.HasValue)
+        {
             return (yahooResult.Value.Price, yahooResult.Value.ActualDate, yahoo.Name);
+        }
 
         Console.Error.WriteLine($"Yahoo failed for {ticker} on {date}, trying Stooq...");
         var stooqResult = await stooq.GetPriceAsync(ticker, date);
         if (stooqResult.HasValue)
+        {
             return (stooqResult.Value.Price, stooqResult.Value.ActualDate, stooq.Name);
+        }
 
         return null;
     }
@@ -234,7 +238,11 @@ internal class Program
             var url =
                 $"https://query1.finance.yahoo.com/v8/finance/chart/{Uri.EscapeDataString(ticker)}?interval=1d&range=1d";
             using var response = await http.GetAsync(url);
-            if (!response.IsSuccessStatusCode) return null;
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
             using var stream = await response.Content.ReadAsStreamAsync();
             using var doc = await JsonDocument.ParseAsync(stream);
             var meta = doc.RootElement.GetProperty("chart").GetProperty("result")[0].GetProperty("meta");
@@ -249,15 +257,18 @@ internal class Program
     private static bool TryParseDate(string? input, out DateOnly result)
     {
         result = default;
-        if (string.IsNullOrWhiteSpace(input)) return false;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
         return DateOnly.TryParseExact(input.Trim(), "yyyy-MM-dd",
             CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
     }
 
-    private static async Task WriteErrorAsync(string message, JsonSerializerOptions opts)
+    private static void WriteError(string message)
     {
         var result = new BacktestResult { Errors = [message] };
-        Console.WriteLine(JsonSerializer.Serialize(result, opts));
-        await Task.CompletedTask;
+        Console.WriteLine(JsonSerializer.Serialize(result, Converters.BacktestJsonContext.Default.BacktestResult));
     }
 }

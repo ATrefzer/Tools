@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using StockBacktest.Converters;
 using StockBacktest.Models;
 
 namespace StockBacktest.Services;
@@ -43,9 +44,12 @@ public sealed class OpenFigiResolver : ISymbolResolver
         };
 
         if (idType is null)
+        {
             return null; // Ticker needs no resolution
+        }
 
-        var body = JsonSerializer.Serialize(new[] { new { idType, idValue = identifier } });
+        OpenFigiRequest[] requestDto = [new OpenFigiRequest(idType, identifier)];
+        var body = JsonSerializer.Serialize(requestDto, BacktestJsonContext.Default.OpenFigiRequestArray);
         var content = new StringContent(body, Encoding.UTF8, "application/json");
 
         Console.Error.WriteLine($"[OpenFIGI] Resolving {type} {identifier}");
@@ -63,27 +67,44 @@ public sealed class OpenFigiResolver : ISymbolResolver
 
         var root = doc.RootElement;
         if (root.ValueKind != JsonValueKind.Array || root.GetArrayLength() == 0)
+        {
             return null;
+        }
 
         var first = root[0];
         if (!first.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array ||
             data.GetArrayLength() == 0)
+        {
             return null;
+        }
 
         // Collect all candidates with known exchange codes
         var candidates = new List<(string Ticker, string ExchCode, string? Suffix, string? Name)>();
 
         foreach (var item in data.EnumerateArray())
         {
-            if (!item.TryGetProperty("ticker", out var tickerEl)) continue;
-            if (!item.TryGetProperty("exchCode", out var exchEl)) continue;
+            if (!item.TryGetProperty("ticker", out var tickerEl))
+            {
+                continue;
+            }
+
+            if (!item.TryGetProperty("exchCode", out var exchEl))
+            {
+                continue;
+            }
 
             var ticker = tickerEl.GetString();
             var exchCode = exchEl.GetString();
 
-            if (string.IsNullOrEmpty(ticker) || string.IsNullOrEmpty(exchCode)) continue;
+            if (string.IsNullOrEmpty(ticker) || string.IsNullOrEmpty(exchCode))
+            {
+                continue;
+            }
 
-            if (!ExchangeSuffix.TryGetValue(exchCode, out var suffix)) continue;
+            if (!ExchangeSuffix.TryGetValue(exchCode, out var suffix))
+            {
+                continue;
+            }
 
             var name = item.TryGetProperty("name", out var nameEl) ? nameEl.GetString() : null;
             candidates.Add((ticker, exchCode, suffix, name));

@@ -20,7 +20,9 @@ public sealed class YahooSearchResolver : ISymbolResolver
         string identifier, IdentifierType type, CancellationToken ct = default)
     {
         if (type == IdentifierType.Ticker)
+        {
             return null;
+        }
 
         var url = $"https://query2.finance.yahoo.com/v1/finance/search?q={Uri.EscapeDataString(identifier)}";
 
@@ -42,9 +44,16 @@ public sealed class YahooSearchResolver : ISymbolResolver
 
         foreach (var item in quotes.EnumerateArray())
         {
-            if (!item.TryGetProperty("symbol", out var symEl)) continue;
+            if (!item.TryGetProperty("symbol", out var symEl))
+            {
+                continue;
+            }
+
             var symbol = symEl.GetString();
-            if (string.IsNullOrEmpty(symbol)) continue;
+            if (string.IsNullOrEmpty(symbol))
+            {
+                continue;
+            }
 
             var name = item.TryGetProperty("shortname", out var snEl) ? snEl.GetString()
                 : item.TryGetProperty("longname", out var lnEl) ? lnEl.GetString()

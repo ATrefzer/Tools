@@ -48,14 +48,21 @@ public sealed class StooqProvider : IPriceProvider
         for (var i = 1; i < lines.Length; i++)
         {
             var parts = lines[i].Trim().Split(',');
-            if (parts.Length < 5) continue;
+            if (parts.Length < 5)
+            {
+                continue;
+            }
 
             if (!DateOnly.TryParseExact(parts[0], "yyyy-MM-dd", CultureInfo.InvariantCulture,
                     DateTimeStyles.None, out var actualDate))
+            {
                 continue;
+            }
 
             if (!decimal.TryParse(parts[4], NumberStyles.Float, CultureInfo.InvariantCulture, out var price))
+            {
                 continue;
+            }
 
             Console.Error.WriteLine($"[Stooq] {stooqTicker} on {actualDate}: {price}");
             return (price, actualDate);

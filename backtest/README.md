@@ -181,12 +181,9 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 # Run directly (debug build)
 dotnet run -- --identifier SAP.DE --type Ticker --buy 2020-01-15
 
-# Publish a release binary (platform-dependent)
-dotnet publish -c Release -o ./publish
+# Single-file self-contained binary for Linux
+dotnet publish -c Release -r linux-x64 -o ./publish/linux
 
-# Self-contained binary for Linux (no .NET runtime required on target)
-dotnet publish -c Release -r linux-x64 --self-contained -o ./publish/linux
-
-# Self-contained binary for Windows
-dotnet publish -c Release -r win-x64 --self-contained -o ./publish/win
+# Single-file self-contained binary for Windows
+dotnet publish -c Release -r win-x64 -o ./publish/win
 ```

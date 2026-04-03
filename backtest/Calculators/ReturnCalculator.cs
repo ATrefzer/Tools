@@ -13,10 +13,14 @@ public static class ReturnCalculator
 
         decimal annualized;
         if (holdingYears <= 0)
+        {
             annualized = percent;
+        }
         else
+        {
             annualized = Math.Round(
                 (decimal)(Math.Pow((double)(sellPrice / buyPrice), 1.0 / holdingYears) - 1) * 100m, 2);
+        }
 
         return (absolute, percent, annualized, holdingDays);
     }

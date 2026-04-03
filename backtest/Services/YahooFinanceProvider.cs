@@ -66,7 +66,9 @@ public sealed class YahooFinanceProvider : IPriceProvider
         for (var i = 0; i < Math.Min(timestamps.Count, closes.Count); i++)
         {
             if (closes[i].ValueKind == JsonValueKind.Null)
+            {
                 continue;
+            }
 
             var ts = timestamps[i].GetInt64();
             var actualDate = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(ts).UtcDateTime);

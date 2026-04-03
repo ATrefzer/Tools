@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace StockBacktest;
+namespace StockBacktest.Converters;
 
 internal sealed class DateOnlyJsonConverter : JsonConverter<DateOnly>
 {
