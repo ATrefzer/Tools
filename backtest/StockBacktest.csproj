@@ -15,10 +15,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Finance.NET" Version="1.1.14"/>
-    </ItemGroup>
-
-    <ItemGroup>
         <Folder Include="Services\"/>
     </ItemGroup>
 

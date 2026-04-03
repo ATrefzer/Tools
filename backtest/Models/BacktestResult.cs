@@ -22,7 +22,7 @@ public class BacktestResult
     public decimal? PercentReturn { get; set; }
     public decimal? AnnualizedReturn { get; set; }
     public int? HoldingDays { get; set; }
-    
+
     public bool HasBuyAndSell()
     {
         return BuyDate != null && BuyPrice != null && SellDate != null && SellPrice != null;

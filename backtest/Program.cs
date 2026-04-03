@@ -1,11 +1,9 @@
 using System.Globalization;
 using System.Text.Json;
-using Finance.Net.Extensions;
-using Finance.Net.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 using StockBacktest.Calculators;
 using StockBacktest.Converters;
 using StockBacktest.Models;
+using StockBacktest.Services;
 
 namespace StockBacktest;
 
@@ -29,10 +27,7 @@ internal static class Program
             request = CreateBackTestRequest(args);
 
 
-            var services = new ServiceCollection();
-            services.AddFinanceNet();
-            var yahoo = services.BuildServiceProvider().GetRequiredService<IYahooFinanceService>();
-
+            var yahoo = new YahooFinanceService();
             var result = await RunBacktestAsync(request, yahoo);
             Console.WriteLine(JsonSerializer.Serialize(result, BacktestJsonContext.Default.BacktestResult));
         }
@@ -113,7 +108,7 @@ internal static class Program
     }
 
     private static async Task<BacktestResult> RunBacktestAsync(
-        BacktestRequest request, IYahooFinanceService yahoo)
+        BacktestRequest request, YahooFinanceService yahoo)
     {
         var quote = await yahoo.GetQuoteAsync(request.Ticker);
 
@@ -154,9 +149,9 @@ internal static class Program
             {
                 // Append return
                 var (absolute, percent, annualized, holdingDays) = ReturnCalculator.Calculate(
-                    result.BuyPrice!.Value, 
-                    result.SellPrice!.Value, 
-                    result.BuyDate!.Value, 
+                    result.BuyPrice!.Value,
+                    result.SellPrice!.Value,
+                    result.BuyDate!.Value,
                     result.SellDate!.Value);
 
                 result.AbsoluteReturn = absolute;
