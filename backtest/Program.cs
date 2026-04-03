@@ -24,10 +24,10 @@ internal class Program
                 "Stock identifier (ISIN, WKN or Ticker symbol)")
             { IsRequired = true };
 
-        var typeOption = new Option<IdentifierType>(
+        var typeOption = new Option<string?>(
             "--type",
-            () => IdentifierType.ISIN,
-            "Identifier type: ISIN | WKN | Ticker");
+            () => null,
+            "Identifier type: ISIN | WKN | Ticker (default: Ticker)");
 
         var buyOption = new Option<string>(
                 "--buy",
@@ -49,10 +49,22 @@ internal class Program
 
         rootCommand.SetHandler(async ctx =>
         {
-            var identifier = ctx.ParseResult.GetValueForOption(identifierOption)!;
-            var type = ctx.ParseResult.GetValueForOption(typeOption);
-            var buyStr = ctx.ParseResult.GetValueForOption(buyOption)!;
-            var sellStr = ctx.ParseResult.GetValueForOption(sellOption);
+            var identifier  = ctx.ParseResult.GetValueForOption(identifierOption)!;
+            var typeStr     = ctx.ParseResult.GetValueForOption(typeOption);
+            var buyStr      = ctx.ParseResult.GetValueForOption(buyOption)!;
+            var sellStr     = ctx.ParseResult.GetValueForOption(sellOption);
+
+            IdentifierType type;
+            if (typeStr is null)
+            {
+                type = IdentifierType.Ticker;
+            }
+            else if (!Enum.TryParse(typeStr, ignoreCase: true, out type))
+            {
+                WriteError($"Invalid --type value: '{typeStr}'. Use ISIN, WKN or Ticker");
+                ctx.ExitCode = 1;
+                return;
+            }
 
             if (!TryParseDate(buyStr, out var buyDate))
             {

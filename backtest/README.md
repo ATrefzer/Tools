@@ -15,7 +15,7 @@ backtest --identifier <ID> --type <type> --buy <date> [--sell <date>]
 | Option         | Required | Default | Description                                   |
 |----------------|----------|---------|-----------------------------------------------|
 | `--identifier` | yes      | —       | Stock identifier (ISIN, WKN or ticker symbol) |
-| `--type`       | no       | `ISIN`  | Identifier type: `ISIN` \| `WKN` \| `Ticker`  |
+| `--type`       | no       | `Ticker` | Identifier type: `ISIN` \| `WKN` \| `Ticker` (case-insensitive) |
 | `--buy`        | yes      | —       | Buy date in format `yyyy-MM-dd`               |
 | `--sell`       | no       | today   | Sell date in format `yyyy-MM-dd`              |
 
