@@ -5,20 +5,18 @@ namespace StockBacktest.Strategies;
 
 internal static class StrategyLoader
 {
-    private static readonly IReadOnlyList<IStrategy> All =
+    private static readonly IReadOnlyList<Type> StrategyTypes =
         Assembly.GetExecutingAssembly()
             .GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(IStrategy).IsAssignableFrom(t))
-            .Select(t => (IStrategy)Activator.CreateInstance(t)!)
             .ToList();
 
-    public static IStrategy? Find(string name)
-    {
-        return All.FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
-    }
+    // Fresh instance per call — strategies may hold per-run state
+    public static IStrategy? Find(string name) =>
+        StrategyTypes
+            .Select(t => (IStrategy)Activator.CreateInstance(t)!)
+            .FirstOrDefault(s => string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase));
 
-    public static IEnumerable<string> ListAvailable()
-    {
-        return All.Select(s => s.Name);
-    }
+    public static IEnumerable<string> ListAvailable() =>
+        StrategyTypes.Select(t => ((IStrategy)Activator.CreateInstance(t)!).Name);
 }
