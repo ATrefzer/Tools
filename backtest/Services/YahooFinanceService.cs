@@ -83,21 +83,28 @@ public class YahooFinanceService
         await Console.Error.WriteLineAsync($"[Yahoo] Search '{query}'");
 
         using var doc = await FetchAsync(url, ct);
-        if (doc is null) return [];
+        if (doc is null)
+        {
+            return [];
+        }
 
         var results = new List<YahooSearchResult>();
         foreach (var quote in doc.RootElement.GetProperty("quotes").EnumerateArray())
         {
             var symbol = GetString(quote, "symbol");
-            if (symbol is null) continue;
+            if (symbol is null)
+            {
+                continue;
+            }
 
             results.Add(new YahooSearchResult
             {
                 Symbol = symbol,
-                Name   = GetString(quote, "longname") ?? GetString(quote, "shortname"),
-                Type   = GetString(quote, "typeDisp")
+                Name = GetString(quote, "longname") ?? GetString(quote, "shortname"),
+                Type = GetString(quote, "typeDisp")
             });
         }
+
         return results;
     }
 

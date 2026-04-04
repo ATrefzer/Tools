@@ -8,10 +8,13 @@
         <AssemblyName>backtest</AssemblyName>
         <RootNamespace>StockBacktest</RootNamespace>
         <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-        <Optimize>true</Optimize>
         <PublishSingleFile>true</PublishSingleFile>
         <PublishTrimmed>false</PublishTrimmed>
         <SelfContained>true</SelfContained>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <Optimize>true</Optimize>
     </PropertyGroup>
 
     <ItemGroup>
