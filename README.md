@@ -8,8 +8,8 @@ Creates an AI summary of YouTube videos.
 
 [README.md](yt-digest/README.md)
 
-## **backtest**
+## **return-calc**
 
 Fetch stock information from the public Yahoo chart API.
 
-[README.md](backtest/README.md)
+[README.md](return-calc/README.md)
