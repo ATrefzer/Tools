@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using YtDigestWeb.Services;
 
 namespace YtDigestWeb.Pages;
 
+[Authorize]
 public class IndexModel : PageModel
 {
     private readonly YtDigestService _ytDigest;

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using YtDigestWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -5,10 +6,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddSingleton<YtDigestService>();
 
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Login";
+    });
+
 var app = builder.Build();
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapRazorPages();
 
 // REST API endpoint
@@ -19,7 +28,7 @@ app.MapPost("/api/summarize", async (SummarizeRequest request, YtDigestService y
 
     var summary = await ytDigest.SummarizeAsync(request.Url, request.Lang ?? "en");
     return Results.Ok(new { summary });
-});
+}).RequireAuthorization();
 
 app.Run();
 
