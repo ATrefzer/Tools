@@ -1,0 +1,40 @@
+@page
+@model IndexModel
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <title>yt-digest</title>
+</head>
+<body>
+    <h1>YouTube Video zusammenfassen</h1>
+
+    <form method="post">
+        <div>
+            <label for="url">YouTube-URL</label>
+            <input type="url" id="url" name="VideoUrl" value="@Model.VideoUrl" required />
+        </div>
+        <div>
+            <label for="lang">Sprache</label>
+            <select id="lang" name="Lang">
+                <option value="de">Deutsch</option>
+                <option value="en">Englisch</option>
+            </select>
+        </div>
+        <button type="submit">Zusammenfassen</button>
+    </form>
+
+    @if (!string.IsNullOrEmpty(Model.Error))
+    {
+        <hr />
+        <p style="color:red">@Model.Error</p>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.Summary))
+    {
+        <hr />
+        <h2>Zusammenfassung</h2>
+        <pre>@Model.Summary</pre>
+    }
+</body>
+</html>
