@@ -1,3 +1,4 @@
+using Markdig;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -21,7 +22,7 @@ public class IndexModel : PageModel
     [BindProperty]
     public string Lang { get; set; } = "de";
 
-    public string? Summary { get; set; }
+    public string? SummaryHtml { get; set; }
     public string? Error { get; set; }
 
     public void OnGet() { }
@@ -30,7 +31,8 @@ public class IndexModel : PageModel
     {
         try
         {
-            Summary = await _ytDigest.SummarizeAsync(VideoUrl, Lang);
+            var markdown = await _ytDigest.SummarizeAsync(VideoUrl, Lang);
+            SummaryHtml = Markdown.ToHtml(markdown);
         }
         catch (Exception ex)
         {

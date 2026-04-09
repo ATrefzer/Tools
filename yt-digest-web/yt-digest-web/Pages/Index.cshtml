@@ -9,7 +9,7 @@
 <body>
     <h1>YouTube Video zusammenfassen</h1>
 
-    <form method="post">
+    <form method="post" id="summarizeForm">
         <div>
             <label for="url">YouTube-URL</label>
             <input type="url" id="url" name="VideoUrl" value="@Model.VideoUrl" required />
@@ -21,7 +21,8 @@
                 <option value="en">Englisch</option>
             </select>
         </div>
-        <button type="submit">Zusammenfassen</button>
+        <button type="submit" id="submitBtn">Zusammenfassen</button>
+        <span id="loadingMsg" style="display:none">Wird verarbeitet, bitte warten...</span>
     </form>
 
     @if (!string.IsNullOrEmpty(Model.Error))
@@ -30,11 +31,18 @@
         <p style="color:red">@Model.Error</p>
     }
 
-    @if (!string.IsNullOrEmpty(Model.Summary))
+    @if (!string.IsNullOrEmpty(Model.SummaryHtml))
     {
         <hr />
         <h2>Zusammenfassung</h2>
-        <pre>@Model.Summary</pre>
+        @Html.Raw(Model.SummaryHtml)
     }
+
+    <script>
+        document.getElementById('summarizeForm').addEventListener('submit', function () {
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('loadingMsg').style.display = 'inline';
+        });
+    </script>
 </body>
 </html>
