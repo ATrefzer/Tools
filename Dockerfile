@@ -2,13 +2,21 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-yt-digest
 WORKDIR /src
 COPY yt-digest/ .
-RUN dotnet publish -c Release -o /yt-digest-out
+
+# Publish as self-contained executable for Linux x64
+RUN dotnet publish -c Release -o /yt-digest-out \
+    --runtime linux-x64 \
+    --self-contained true \
+    -p:PublishSingleFile=true \
+    -p:IncludeNativeLibrariesForSelfExtract=true
 
 # Build stage for yt-digest-web (the web frontend)
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-web
 WORKDIR /src
-COPY yt-digest-web/ .
-RUN dotnet publish -c Release -o /web-out
+COPY yt-digest-web/yt-digest-web/ .
+RUN dotnet publish -c Release -o /web-out \
+    --runtime linux-x64 \
+    --self-contained false   # Web-App bleibt Framework-dependent
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
@@ -21,6 +29,19 @@ COPY --from=build-web /web-out .
 COPY --from=build-yt-digest /yt-digest-out/yt-digest /usr/local/bin/yt-digest
 RUN chmod +x /usr/local/bin/yt-digest
 
+
+# Installiere Deno systemweit (statt im Benutzerverzeichnis)
+RUN curl -fsSL https://deno.land/install.sh | sh -s -- --install-dir /usr/local/bin
+ENV PATH="/usr/local/bin:${PATH}"
+
+# yt-dlp dependencies: python3 and ffmpeg for media processing, ca-certificates for HTTPS
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    ffmpeg \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Download yt-dlp for Linux x86_64.
 # For other platforms use the appropriate binary from:
 # https://github.com/yt-dlp/yt-dlp/releases
@@ -31,14 +52,6 @@ RUN chmod +x /usr/local/bin/yt-digest
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
     -o /usr/local/bin/yt-dlp \
     && chmod +x /usr/local/bin/yt-dlp
-
-# yt-dlp dependencies: python3 and ffmpeg for media processing, ca-certificates for HTTPS
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    ffmpeg \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
