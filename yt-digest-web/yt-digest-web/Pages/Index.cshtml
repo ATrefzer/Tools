@@ -1,8 +1,8 @@
 @page
 @model IndexModel
-@{ ViewData["Title"] = "Zusammenfassung"; }
+@{ ViewData["Title"] = "Summary"; }
 
-<h2 class="mb-4">YouTube Video zusammenfassen</h2>
+<h2 class="mb-4">Summarize YouTube video</h2>
 
 <form method="post" id="summarizeForm">
     <div class="mb-3">
@@ -11,17 +11,15 @@
                class="form-control" placeholder="https://www.youtube.com/watch?v=..." required />
     </div>
     <div class="mb-3">
-        <label for="lang" class="form-label">Sprache</label>
-        <select id="lang" name="Lang" class="form-select">
-            <option value="de">Deutsch</option>
-            <option value="en">Englisch</option>
-        </select>
+        <label for="lang" class="form-label">Subtitle language</label>
+        <input type="text" id="lang" name="Lang" value="@Model.Lang"
+               class="form-control" placeholder="z.B. de, en, en-orig" />
     </div>
     <div class="d-flex align-items-center gap-3">
-        <button type="submit" id="submitBtn" class="btn btn-primary">Zusammenfassen</button>
+        <button type="submit" id="submitBtn" class="btn btn-primary">Summarize</button>
         <span id="loadingMsg" class="text-muted" style="display:none">
             <span class="spinner-border spinner-border-sm me-1"></span>
-            Wird verarbeitet, bitte warten...
+            Please wait ...
         </span>
     </div>
 </form>
