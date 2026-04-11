@@ -1,25 +1,24 @@
 @page
 @model LoginModel
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="utf-8" />
-    <title>Login – yt-digest</title>
-</head>
-<body>
-    <h1>Login</h1>
+@{ ViewData["Title"] = "Login"; }
 
-    <form method="post">
-        <div>
-            <label for="password">Passwort</label>
-            <input type="password" id="password" name="Password" required />
-        </div>
-        <button type="submit">Einloggen</button>
-    </form>
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <h2 class="mb-4">Login</h2>
 
-    @if (!string.IsNullOrEmpty(Model.Error))
-    {
-        <p style="color:red">@Model.Error</p>
-    }
-</body>
-</html>
+        <form method="post">
+            <div class="mb-3">
+                <label for="password" class="form-label">Passwort</label>
+                <input type="password" id="password" name="Password"
+                       class="form-control" required />
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Error))
+            {
+                <div class="alert alert-danger">@Model.Error</div>
+            }
+
+            <button type="submit" class="btn btn-primary w-100">Einloggen</button>
+        </form>
+    </div>
+</div>
