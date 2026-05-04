@@ -1,6 +1,10 @@
-using System.Text.Json;
+using InterstitialJournal;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.TypeInfoResolverChain.Insert(0, AppJsonContext.Default);
+});
 var app = builder.Build();
 
 //  Provide static files from wwwroot/ (index.html)
@@ -10,20 +14,6 @@ app.UseStaticFiles();
 // Path to JSON file with entries
 var dataFile = Path.Combine(app.Environment.ContentRootPath, "entries.json");
 
-// --- Helper functions for reading and writing ---
-
-List<Entry> LoadEntries()
-{
-    if (!File.Exists(dataFile)) return new List<Entry>();
-    var json = File.ReadAllText(dataFile);
-    return JsonSerializer.Deserialize<List<Entry>>(json) ?? new List<Entry>();
-}
-
-void SaveEntries(List<Entry> entries)
-{
-    var json = JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true });
-    File.WriteAllText(dataFile, json);
-}
 
 // --- API Endpoints ---
 
@@ -31,12 +21,10 @@ void SaveEntries(List<Entry> entries)
 // Returns all entries, optionally filtered by date (yyyy-MM-dd)
 app.MapGet("/api/entries", (string? date) =>
 {
-    var entries = LoadEntries();
+    var entries = Persistence.LoadEntries(dataFile);
 
-    if (!string.IsNullOrEmpty(date))
-    {
-        entries = entries.Where(e => e.Timestamp.StartsWith(date)).ToList();
-    }
+    if (!string.IsNullOrEmpty(date) && DateOnly.TryParse(date, out var filterDate))
+        entries = entries.Where(e => DateOnly.FromDateTime(e.Timestamp) == filterDate).ToList();
 
     // Most recent entries first
     return entries.OrderByDescending(e => e.Timestamp).ToList();
@@ -49,16 +37,16 @@ app.MapPost("/api/entries", (EntryInput input) =>
     if (string.IsNullOrWhiteSpace(input.Text))
         return Results.BadRequest("Text must not be empty.");
 
-    var entries = LoadEntries();
+    var entries = Persistence.LoadEntries(dataFile);
 
     var newEntry = new Entry(
-        Id: Guid.NewGuid().ToString(),
-        Timestamp: DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
-        Text: input.Text.Trim()
+        Guid.NewGuid().ToString(),
+        DateTime.Now,
+        input.Text.Trim()
     );
 
     entries.Add(newEntry);
-    SaveEntries(entries);
+    Persistence.SaveEntries(dataFile, entries);
 
     return Results.Ok(newEntry);
 });
@@ -67,14 +55,14 @@ app.MapPost("/api/entries", (EntryInput input) =>
 // Deletes a single entry
 app.MapDelete("/api/entries/{id}", (string id) =>
 {
-    var entries = LoadEntries();
+    var entries = Persistence.LoadEntries(dataFile);
     var before = entries.Count;
     entries.RemoveAll(e => e.Id == id);
 
     if (entries.Count == before)
         return Results.NotFound();
 
-    SaveEntries(entries);
+    Persistence.SaveEntries(dataFile, entries);
     return Results.Ok();
 });
 
@@ -83,7 +71,10 @@ app.Run();
 // --- Data Models ---
 
 // A stored entry
-record Entry(string Id, string Timestamp, string Text);
+internal record Entry(string Id, DateTime Timestamp, string Text)
+{
+    public string DisplayTimestamp { get; init; } = Timestamp.ToString("HH:mm");
+}
 
 // The payload the browser sends when creating an entry
-record EntryInput(string Text);
+internal record EntryInput(string Text);

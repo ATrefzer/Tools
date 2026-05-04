@@ -299,7 +299,7 @@
 
       container.innerHTML = entries.map(e => `
         <div class="entry" id="entry-${e.id}">
-          <span class="entry-time">${e.timestamp.split(' ')[1]}</span>
+          <span class="entry-time">${e.displayTimestamp}</span>
           <span class="entry-text">${escapeHtml(e.text)}</span>
           <button class="entry-delete" onclick="deleteEntry('${e.id}')" title="Delete">×</button>
         </div>

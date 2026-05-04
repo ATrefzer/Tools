@@ -371,3 +371,4 @@ processed_videos.json
 processed_videos.lastrun
 /.claude/settings.local.json
 **/.idea/
+/interstitial-journal/entries.json
