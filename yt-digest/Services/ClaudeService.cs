@@ -11,15 +11,14 @@ namespace YoutubeDigest.Services;
 /// </summary>
 public class ClaudeService : ISummaryService
 {
-    public const string DefaultModel = "claude-sonnet-4-20250514";
+    public const string DefaultModel = "claude-sonnet-5-5";
 
     private readonly AnthropicClient _client;
     private readonly string _model;
     private readonly Prompt _prompt;
 
-    // Claude has a large context window (200k tokens), so we can send more text.
-    // ~100k characters is safe for most transcripts.
-    private const int MaxTranscriptChars = 150_000;
+    // ~200k characters is safe for most transcripts.
+    private const int MaxTranscriptChars = 200_000;
 
     public ClaudeService(string apiKey, Prompt prompt, string model = DefaultModel)
     {
@@ -54,15 +53,15 @@ public class ClaudeService : ISummaryService
         var response = await _client.Messages.Create(parameters);
 
         // Extract text from the first content block's JSON
-        var firstBlock = response.Content.FirstOrDefault();
         var content = "Error: No response received from Claude.";
 
-        if (firstBlock?.Json != null)
+        foreach (var block in response.Content)
         {
-            // The JSON structure is: { "type": "text", "text": "..." }
-            if (firstBlock.Json.TryGetProperty("text", out var textElement))
+            if (block.Json.TryGetProperty("type", out var type) && type.GetString() == "text" &&
+                block.Json.TryGetProperty("text", out var textElement))
             {
                 content = textElement.GetString() ?? content;
+                break;
             }
         }
 
